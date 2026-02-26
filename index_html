@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Kartu Ultah Interaktif</title>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(to bottom, #ffe6f2, #ccf2ff);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Arial', sans-serif;
+}
+
+h1 {
+  margin-top: 30px;
+  color: #ff3399;
+  text-align: center;
+}
+
+#cake {
+  position: relative;
+  width: 300px;
+  height: 150px;
+  background: #ffcc66;
+  border-radius: 20px 20px 10px 10px;
+  margin: 50px 0;
+}
+
+.candle {
+  width: 20px;
+  height: 60px;
+  background: orange;
+  position: absolute;
+  bottom: 100%;
+  border-radius: 5px;
+}
+
+.flame {
+  width: 12px;
+  height: 20px;
+  background: yellow;
+  position: absolute;
+  top: -20px;
+  left: 4px;
+  border-radius: 50%;
+  animation: flicker 0.2s infinite;
+}
+
+@keyframes flicker {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#message {
+  font-size: 24px;
+  margin-top: 20px;
+  color: #333;
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<h1 id="greeting">happy birthday my friend!!! :D</h1>
+
+<div id="cake">
+  <div class="candle" style="left: 40px;"><div class="flame"></div></div>
+  <div class="candle" style="left: 130px;"><div class="flame"></div></div>
+  <div class="candle" style="left: 220px;"><div class="flame"></div></div>
+</div>
+
+<div id="message"></div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+/* ---------------- Mic Detect Blow ---------------- */
+navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+  const audioContext = new AudioContext();
+  const analyser = audioContext.createAnalyser();
+  const microphone = audioContext.createMediaStreamSource(stream);
+  microphone.connect(analyser);
+  analyser.fftSize = 256;
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  function detectBlow() {
+    analyser.getByteFrequencyData(dataArray);
+    let sum = dataArray.reduce((a,b)=>a+b,0);
+    if(sum > 12000) {  // threshold suara hembusan
+      blowCandle();
+    } else {
+      requestAnimationFrame(detectBlow);
+    }
+  }
+  detectBlow();
+});
+
+/* ---------------- Blow Candle ---------------- */
+function blowCandle() {
+  document.querySelectorAll('.flame').forEach(f => f.style.display = 'none');
+  document.getElementById('message').textContent = "🔥 Lilin padam! 🎉";
+  launchConfetti();
+}
+
+/* ---------------- Confetti Animation ---------------- */
+const canvas = document.getElementById('confetti');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const ctx = canvas.getContext('2d');
+
+let confettis = [];
+
+function launchConfetti() {
+  for(let i=0;i<150;i++){
+    confettis.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height-50,
+      r: Math.random()*6+4,
+      d: Math.random()*150+50,
+      color: `hsl(${Math.random()*360},100%,50%)`,
+      tilt: Math.random()*10-10,
+      tiltAngleIncremental: Math.random()*0.07+0.05,
+      tiltAngle: 0
+    });
+  }
+  requestAnimationFrame(drawConfetti);
+}
+
+function drawConfetti() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  confettis.forEach((c,i)=>{
+    c.tiltAngle += c.tiltAngleIncremental;
+    c.y += (Math.cos(c.d)+3+c.r/2)/2;
+    c.tilt = Math.sin(c.tiltAngle) * 15;
+    ctx.beginPath();
+    ctx.lineWidth = c.r;
+    ctx.strokeStyle = c.color;
+    ctx.moveTo(c.x + c.tilt + c.r/2, c.y);
+    ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r/2);
+    ctx.stroke();
+    if(c.y > canvas.height) confettis.splice(i,1);
+  });
+  if(confettis.length>0) requestAnimationFrame(drawConfetti);
+}
+
+/* ---------------- Responsive Canvas ---------------- */
+window.addEventListener('resize', ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
